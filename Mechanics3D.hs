@@ -199,7 +199,7 @@ positionPS ::
   (Time -> PosVec) -- position function
 positionPS method fs st t =
   let states = statesPS method fs st
-      dt = time (states !! 1) - time (states !! 0)
+      dt = time (states !! 1) - time (head states)
       numSteps = abs $ round (t / dt)
       st1 = solver method (newtonSecondPS fs) st !! numSteps
    in posVec st1

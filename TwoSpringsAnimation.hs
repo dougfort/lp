@@ -11,7 +11,7 @@ main = simulateVis 1 20 twoSpringInitial twoSpringVisObject twoSpringUpdate
 
 twoSpringVisObject :: MultiParticleState -> VisObject R
 twoSpringVisObject (MPS sts) =
-  let r0 = posVec (sts !! 0)
+  let r0 = posVec (head sts)
       r1 = posVec (sts !! 1)
       springsObj =
         Line

@@ -176,8 +176,8 @@ updateMPS ::
   (MultiParticleState -> MultiParticleState)
 updateMPS method = method . newtonSecondMPS
 
-stateMPS ::
+statesMPS ::
   NumericalMethod MultiParticleState DMultiParticleState ->
   [Force] ->
   (MultiParticleState -> [MultiParticleState])
-stateMPS method = iterate . method . newtonSecondMPS
+statesMPS method = iterate . method . newtonSecondMPS
