@@ -232,3 +232,106 @@ pTableEu ::
   [TimeStep] -> -- dts
   Table Float
 pTableEu = pTable euler
+
+systemKEWithTime :: IO ()
+systemKEWithTime =
+  let timeKEPairsEC =
+        [ (timeOf mpst, systemKE mpst)
+          | mpst <- billiardStatesFinite eulerCromerMPS 30 0.03
+        ]
+      timeKEPairsRK4 =
+        [ (timeOf mpst, systemKE mpst)
+          | mpst <- billiardStatesFinite rungeKutta4 30 0.03
+        ]
+   in plotPaths
+        [ Key Nothing,
+          Title "System Kinetic Energy versus Time",
+          XLabel "Time (s)",
+          YLabel "System Kinetic Energy",
+          XRange (4, 6),
+          PNG "SystemKE.PNG",
+          customLabel (4.1, 0.0026) "dt = 0.03 s",
+          customLabel (4.1, 0.0025) "k = 30 N/m",
+          customLabel (5.4, 0.00329) "Euler-Cromer",
+          customLabel (5.4, 0.00309) "Runge-Kutta 4"
+        ]
+        [timeKEPairsEC, timeKEPairsRK4]
+
+percentChangeKE :: [MultiParticleState] -> R
+percentChangeKE mpsts =
+  let ke0 = systemKE (head mpsts)
+      ke1 = systemKE (last mpsts)
+   in 100 * (ke1 - ke0) / ke0
+
+tenths :: R -> Float
+tenths =
+  let toInt :: R -> Int
+      toInt = round
+   in (/ 10) . fromIntegral . toInt . (* 10)
+
+keTable ::
+  (TimeStep -> NumericalMethod MultiParticleState DMultiParticleState) ->
+  [R] -> -- ks
+  [TimeStep] -> -- dts
+  Table Float
+keTable nMethod ks dts =
+  Table
+    RJ
+    [ [ tenths $
+          percentChangeKE (billiardStatesFinite nMethod k dt)
+        | dt <- dts
+      ]
+      | k <- ks
+    ]
+
+contactSteps :: [MultiParticleState] -> Int
+contactSteps = length . takeWhile inContact . dropWhile (not . inContact)
+
+inContact :: MultiParticleState -> Bool
+inContact (MPS sts) =
+  let r = magnitude $ posVec (head sts) ^-^ posVec (sts !! 1)
+   in r < 2 * ballRadius
+
+contactTable ::
+  (TimeStep -> NumericalMethod MultiParticleState DMultiParticleState) ->
+  [R] -> -- ks
+  [TimeStep] -> -- dts
+  Table Int
+contactTable nMethod ks dts =
+  Table
+    RJ
+    [ [ contactSteps (billiardStatesFinite nMethod k dt)
+        | dt <- dts
+      ]
+      | k <- ks
+    ]
+
+closest :: [MultiParticleState] -> R
+closest = minimum . map separation
+
+separation :: MultiParticleState -> R
+separation (MPS sts) = magnitude $ posVec (head sts) ^-^ posVec (sts !! 1)
+
+closestTable ::
+  (TimeStep -> NumericalMethod MultiParticleState DMultiParticleState) ->
+  [R] -> -- ks
+  [TimeStep] -> -- dts
+  Table Float
+closestTable nMethod ks dts =
+  Table
+    RJ
+    [ [ tenths $ (100 *) $ closest (billiardStatesFinite nMethod k dt)
+        | dt <- dts
+      ]
+      | k <- ks
+    ]
+
+billiardPicture :: MultiParticleState -> G.Picture
+billiardPicture (MPS sts) =
+  G.scale ppm ppm $ G.pictures [place st | st <- sts]
+  where
+    ppm = 100 -- pixels per meter
+    place st = G.translate (xSt st) (ySt st) blueBall
+    xSt = realToFrac . xComp . posVec
+    ySt = realToFrac . yComp . posVec
+    blueBall = G.Color G.blue (disk $ realToFrac ballRadius)
