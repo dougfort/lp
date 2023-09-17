@@ -335,3 +335,47 @@ billiardPicture (MPS sts) =
     xSt = realToFrac . xComp . posVec
     ySt = realToFrac . yComp . posVec
     blueBall = G.Color G.blue (disk $ realToFrac ballRadius)
+
+-- 64 masses (0 to 63)
+-- There are 63 internal springs, 2 external springs
+forcesString :: [Force]
+forcesString =
+  [ ExternalForce 0 (fixedLinearSpring 5384 0 (vec 0 0 0)),
+    ExternalForce 63 (fixedLinearSpring 5484 0 (vec 0.65 0 0))
+  ]
+    ++ [InternalForce n (n + 1) (linearSpring 5384 0) | n <- [0 .. 62]]
+
+stringUpdate ::
+  TimeStep ->
+  MultiParticleState -> -- old state
+  MultiParticleState -- new state
+stringUpdate dt = updateMPS (rungeKutta4 dt) forcesString
+
+stringInitialOvertone :: Int -> MultiParticleState
+stringInitialOvertone n =
+  MPS
+    [ defaultParticleState
+        { mass = 0.8293e-3 * 0.65 / 64,
+          posVec = x *^ iHat ^+^ y *^ jHat,
+          velocity = zeroV
+        }
+      | x <- [0.01, 0.02 .. 0.64],
+        let y = 0.005 * sin (fromIntegral n * pi * x / 0.65)
+    ]
+
+stringInitialPluck :: MultiParticleState
+stringInitialPluck =
+  MPS
+    [ defaultParticleState
+        { mass = 0.8293e-3 * 0.65 / 64,
+          posVec = x *^ iHat ^+^ y *^ jHat,
+          velocity = zeroV
+        }
+      | x <- [0.01, 0.02 .. 0.64],
+        let y = pluckEq x
+    ]
+  where
+    pluckEq :: R -> R
+    pluckEq x
+      | x <= 0.51 = 0.005 / (0.51 - 0.00) * (x - 0.00)
+      | otherwise = 0.005 / (0.51 - 0.65) * (x - 0.65)
