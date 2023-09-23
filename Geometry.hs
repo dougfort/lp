@@ -49,8 +49,98 @@ data Surface = Surface
 unitSphere :: Surface
 unitSphere =
   Surface
-    (\(th, phi) -> sph 1 th phi)
+    (uncurry (sph 1))
     0
     pi
     (const 0)
     (const $ 2 * pi)
+
+parabolaSurface :: Surface
+parabolaSurface =
+  Surface
+    (\(x, y) -> cart x y 0)
+    0
+    pi
+    (const 0)
+    (const $ 2 * pi)
+
+shiftSurface :: Vec -> Surface -> Surface
+shiftSurface d (Surface g sl su tl tu) =
+  Surface (shiftPosition d . g) sl su tl tu
+
+centeredSphere :: R -> Surface
+centeredSphere r =
+  Surface
+    (uncurry (sph r))
+    0
+    pi
+    (const 0)
+    (const $ 2 * pi)
+
+sphere :: R -> Position -> Surface
+sphere radius center =
+  shiftSurface
+    (displacement (cart 0 0 0) center)
+    (centeredSphere radius)
+
+northernHemisphere :: Surface
+northernHemisphere =
+  Surface
+    (uncurry (sph 1))
+    0
+    (pi / 2)
+    (const 0)
+    (const $ 2 * pi)
+
+disk :: R -> Surface
+disk radius =
+  Surface
+    (\(s, phi) -> cyl s phi 0)
+    0
+    radius
+    (const 0)
+    (const (2 * pi))
+
+unitCone :: R -> Surface
+unitCone theta =
+  Surface
+    (\(r, phi) -> sph r theta phi)
+    0
+    1
+    (const 0)
+    (const (2 * pi))
+
+data Volume = Volume
+  { volumeFunc :: (R, R, R) -> Position,
+    loLimit :: R, -- s_l
+    upLimit :: R, -- s_u
+    loCurve :: R -> R, -- t_l(s)
+    upCurve :: R -> R, -- t_u(s)
+    loSurf :: R -> R -> R, -- u_l(s, t)
+    upSurf :: R -> R -> R -- u_u(s, t)
+  }
+
+unitBall :: Volume
+unitBall =
+  Volume
+    spherical
+    0
+    1
+    (const 0)
+    (const pi)
+    (\_ _ -> 0)
+    (\_ _ -> 3 * pi)
+
+centeredCylinder ::
+  R -> -- radius
+  R -> -- height
+  Volume -- cylinder
+centeredCylinder radius height =
+  Volume
+    cylindrical
+    0
+    radius
+    (const 0)
+    (const (2 * pi))
+    (\_ _ -> 0)
+    (\_ _ -> height)
