@@ -12,7 +12,7 @@ import CoordinateSystems
     shiftPosition,
     sph,
   )
-import Diagrams (radius)
+import Diagrams (arc', radius)
 import Electricity
   ( elementaryCharge,
   )
@@ -95,3 +95,41 @@ totalCharge (VolumeCharge rho v) =
   scalarVolumeIntegral (volumeSample 50) rho v
 totalCharge (MultipleCharges ds) =
   sum [totalCharge d | d <- ds]
+
+simpleDipole ::
+  Vec -> -- electric dipole moment
+  R -> -- charge separation
+  ChargeDistribution
+simpleDipole p sep =
+  let q = magnitude p / sep
+      disp = (sep / 2) *^ (p ^/ magnitude p)
+   in MultipleCharges
+        [ PointCharge q (shiftPosition disp origin),
+          PointCharge (-q) (shiftPosition (negateV disp) origin)
+        ]
+
+electricDipoleMoment :: ChargeDistribution -> Vec
+electricDipoleMoment (PointCharge q r) =
+  q *^ displacement origin r
+electricDipoleMoment (LineCharge lambda c) =
+  vectorLineIntegral (curveSample 1000) (\r -> lambda r *^ rVF r) c
+electricDipoleMoment (SurfaceCharge sigma s) =
+  vectorSurfaceIntegral (surfaceSample 200) (\r -> sigma r *^ rVF r) s
+electricDipoleMoment (VolumeCharge rho v) =
+  vectorVolumeIntegral (volumeSample 50) (\r -> rho r *^ rVF r) v
+electricDipoleMoment (MultipleCharges ds) =
+  sumV [electricDipoleMoment d | d <- ds]
+
+lineDipole ::
+  Vec -> -- dipole moment
+  R -> -- charge separation
+  ChargeDistribution
+lineDipole p sep =
+  let disp = (sep / 2) *^ (p ^/ magnitude p)
+      curve =
+        straightLine
+          (shiftPosition (negateV disp) origin)
+          (shiftPosition disp origin)
+      coeff = 12 / sep ** 3
+      lambda r = coeff * (displacement origin r <.> p)
+   in LineCharge lambda curve
