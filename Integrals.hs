@@ -5,6 +5,7 @@ module Integrals where
 import CoordinateSystems
   ( Position,
     ScalarField,
+    VectorField,
     displacement,
     origin,
     rVF,
@@ -20,10 +21,11 @@ import SimpleVec
     Vec,
     magnitude,
     (*^),
+    (^*),
     (<.>),
     (><),
     (^+^),
-    (^/),
+    (^/), sumV,
   )
 
 type CurveApprox = Curve -> [(Position, Vec)]
@@ -158,7 +160,12 @@ scalarVolumeIntegral :: VolumeApprox -> ScalarField -> Volume -> R
 scalarVolumeIntegral approx f vol =
   sum [f r' * dv' | (r', dv') <- approx vol]
 
-vectorLineIntegral = undefined
+type VectorLineIntegral = VectorField -> Curve -> Vec
+
+vectorLineIntegral :: CurveApprox -> VectorField -> Curve -> Vec
+vectorLineIntegral approx vF c = 
+  sumV [vF r' ^* magnitude dl' | (r', dl') <- approx c]
+  
 
 vectorSurfaceIntegral = undefined
 
