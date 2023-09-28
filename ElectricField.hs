@@ -31,6 +31,12 @@ import Geometry
     Surface (..),
     Volume (..),
   )
+import Integrals
+  ( curveSample,
+    surfaceSample,
+    vectorLineIntegral,
+    vectorSurfaceIntegral,
+  )
 import SimpleVec
   ( R,
     Vec,
@@ -68,8 +74,32 @@ eFieldFromPointCharge q1 r1 r =
       d = displacement r1 r
    in (k * q1) *^ d ^/ magnitude d ** 3
 
+eFieldFromLineCharge ::
+  ScalarField -> -- linear charge density lambda
+  Curve -> -- geometry of the line charge
+  VectorField -- electric field (in V/m)
+eFieldFromLineCharge lambda c r =
+  let k = 1 / (4 * pi * epsilon0)
+      integrand r' = lambda r' *^ d ^/ magnitude d ** 3
+        where
+          d = displacement r' r
+   in k *^ vectorLineIntegral (curveSample 1000) integrand c
+
+eFieldFromSurfaceCharge ::
+  ScalarField -> -- surface charge density sigma
+  Surface -> -- geometry of the surface charge
+  VectorField -- electric field (in V/m)
+eFieldFromSurfaceCharge sigma s r =
+  let k = 1 / (4 * pi * epsilon0)
+      integrand r' = sigma r' *^ d ^/ magnitude d ** 3
+        where
+          d = displacement r' r
+   in k *^ vectorSurfaceIntegral (surfaceSample 200) integrand s
+
 eField :: ChargeDistribution -> VectorField
 eField (PointCharge q r) = eFieldFromPointCharge q r
+eField (LineCharge lam c) = eFieldFromLineCharge lam c
+eField (SurfaceCharge sig s) = eFieldFromSurfaceCharge sig s
 eField (MultipleCharges cds) = addVectorFields $ map eField cds -- superposition
 
 eFieldPicProton2D :: IO ()
@@ -132,3 +162,22 @@ eFieldPicIdealDipole =
     "eFieldPicIdealDipole.png"
     20
     (eFieldIdealDipole kHat)
+
+lineDipoleSodiumChloride :: ChargeDistribution
+lineDipoleSodiumChloride = lineDipole (vec 0 0 2.99e-29) 2.36e-10
+
+eFieldLineDipole :: VectorField
+eFieldLineDipole = eField lineDipoleSodiumChloride
+
+eFieldDiskCap :: VectorField
+eFieldDiskCap = eField $ diskCap 0.05 0.04 2e-8
+
+eFieldPicDiskCap :: IO ()
+eFieldPicDiskCap =
+  vfGrad
+    (** 0.2)
+    (\(x, z) -> cart (0.1 * x) 0 (0.1 * z))
+    (\v -> (xComp v, zComp v))
+    "eFieldPicDiskCap.png"
+    20
+    eFieldDiskCap

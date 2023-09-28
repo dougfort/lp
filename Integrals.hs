@@ -166,7 +166,10 @@ vectorLineIntegral :: CurveApprox -> VectorField -> Curve -> Vec
 vectorLineIntegral approx vF c = 
   sumV [vF r' ^* magnitude dl' | (r', dl') <- approx c]
   
+type VectorSurfaceIntegral = VectorField -> Surface -> Vec
 
-vectorSurfaceIntegral = undefined
+vectorSurfaceIntegral :: SurfaceApprox -> VectorField -> Surface -> Vec
+vectorSurfaceIntegral approx vF s = 
+  sumV [vF r' ^* magnitude da' | (r', da') <- approx s]
 
 vectorVolumeIntegral = undefined
