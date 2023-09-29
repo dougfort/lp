@@ -7,8 +7,6 @@
 
 module MultipleObjects where
 
-import Data.List (zipWith)
-import GHC.Base (undefined)
 import Mechanics1D
   ( Diff (..),
     Mass,
@@ -31,8 +29,6 @@ import SimpleVec
     magnitude,
     zeroV,
     (*^),
-    (<.>),
-    (><),
     (^*),
     (^+^),
     (^-^),

@@ -20,12 +20,13 @@ import SimpleVec
   ( R,
     Vec,
     magnitude,
+    sumV,
     (*^),
-    (^*),
     (<.>),
     (><),
+    (^*),
     (^+^),
-    (^/), sumV,
+    (^/),
   )
 
 type CurveApprox = Curve -> [(Position, Vec)]
@@ -163,13 +164,17 @@ scalarVolumeIntegral approx f vol =
 type VectorLineIntegral = VectorField -> Curve -> Vec
 
 vectorLineIntegral :: CurveApprox -> VectorField -> Curve -> Vec
-vectorLineIntegral approx vF c = 
+vectorLineIntegral approx vF c =
   sumV [vF r' ^* magnitude dl' | (r', dl') <- approx c]
-  
+
 type VectorSurfaceIntegral = VectorField -> Surface -> Vec
 
 vectorSurfaceIntegral :: SurfaceApprox -> VectorField -> Surface -> Vec
-vectorSurfaceIntegral approx vF s = 
+vectorSurfaceIntegral approx vF s =
   sumV [vF r' ^* magnitude da' | (r', da') <- approx s]
 
-vectorVolumeIntegral = undefined
+type VectorVolumeIntegral = VectorField -> Volume -> Vec
+
+vectorVolumeIntegral :: VolumeApprox -> VectorField -> Volume -> Vec
+vectorVolumeIntegral approx vF vol =
+  sumV [vF r' ^* dv' | (r', dv') <- approx vol]

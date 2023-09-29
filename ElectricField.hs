@@ -36,6 +36,8 @@ import Integrals
     surfaceSample,
     vectorLineIntegral,
     vectorSurfaceIntegral,
+    vectorVolumeIntegral,
+    volumeSample,
   )
 import SimpleVec
   ( R,
@@ -96,10 +98,22 @@ eFieldFromSurfaceCharge sigma s r =
           d = displacement r' r
    in k *^ vectorSurfaceIntegral (surfaceSample 200) integrand s
 
+eFieldFromVolumeCharge ::
+  ScalarField -> -- volume charge density rho
+  Volume -> -- geometry of the volume charge
+  VectorField -- electric field (in V/m)
+eFieldFromVolumeCharge rho v r =
+  let k = 1 / (4 * pi * epsilon0)
+      integrand r' = rho r' *^ d ^/ magnitude d ** 3
+        where
+          d = displacement r' r
+   in k *^ vectorVolumeIntegral (volumeSample 50) integrand v
+
 eField :: ChargeDistribution -> VectorField
 eField (PointCharge q r) = eFieldFromPointCharge q r
 eField (LineCharge lam c) = eFieldFromLineCharge lam c
 eField (SurfaceCharge sig s) = eFieldFromSurfaceCharge sig s
+eField (VolumeCharge rho v) = eFieldFromVolumeCharge rho v
 eField (MultipleCharges cds) = addVectorFields $ map eField cds -- superposition
 
 eFieldPicProton2D :: IO ()

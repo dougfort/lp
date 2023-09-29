@@ -24,7 +24,6 @@ import MultipleObjects
   ( DMultiParticleState (..),
     Force (..),
     MultiParticleState (..),
-    TwoBodyForce,
     billiardForce,
     eulerCromerMPS,
     fixedLinearSpring,
