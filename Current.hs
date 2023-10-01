@@ -1,5 +1,7 @@
 {-# OPTIONS -Wall #-}
 
+module Current where
+
 import CoordinateSystems
   ( VectorField,
     cyl,
