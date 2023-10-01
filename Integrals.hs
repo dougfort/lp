@@ -178,3 +178,7 @@ type VectorVolumeIntegral = VectorField -> Volume -> Vec
 vectorVolumeIntegral :: VolumeApprox -> VectorField -> Volume -> Vec
 vectorVolumeIntegral approx vF vol =
   sumV [vF r' ^* dv' | (r', dv') <- approx vol]
+
+crossedLineIntegral :: CurveApprox -> VectorField -> Curve -> Vec
+crossedLineIntegral approx vF c =
+  sumV [vF r' >< dl' | (r', dl') <- approx c]
