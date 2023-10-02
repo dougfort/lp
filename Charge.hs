@@ -12,7 +12,6 @@ import CoordinateSystems
     shiftPosition,
     sph,
   )
-import Diagrams (arc', radius)
 import Electricity
   ( elementaryCharge,
   )

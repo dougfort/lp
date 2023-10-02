@@ -17,15 +17,12 @@ import CoordinateSystems
     addVectorFields,
     cart,
     displacement,
-    origin,
     rVF,
-    shiftPosition,
     sph,
     vf3D,
     vfGrad,
     vfPNGxy,
   )
-import Diagrams (r2)
 import Geometry
   ( Curve (..),
     Surface (..),
@@ -44,16 +41,12 @@ import SimpleVec
     Vec,
     kHat,
     magnitude,
-    sumV,
     vec,
     xComp,
     yComp,
     zComp,
     (*^),
     (<.>),
-    (><),
-    (^*),
-    (^+^),
     (^-^),
     (^/),
   )
