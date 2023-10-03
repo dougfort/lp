@@ -91,3 +91,26 @@ instance Diff ParticleFieldState DParticleFieldState where
 
 instance HasTime ParticleFieldState where
   timeOf = time
+
+lorentzForce :: ParticleFieldState -> Vec
+lorentzForce (ParticleFieldState _m q _t r v eF bF) =
+  q *^ (eF r ^+^ v >< bF r)
+
+newtonSecondPFS :: ParticleFieldState -> DParticleFieldState
+newtonSecondPFS st =
+  let v = velocity st
+      a = lorentzForce st ^/ mass st
+   in DParticleFieldState
+        { dmdt = 0, -- dm/dt
+          dqdt = 0, -- dq/dt
+          dtdt = 1, -- dt/dt
+          drdt = v, -- dr/dt
+          dvdt = a, -- dv/dt
+          dEdt = const zeroV, -- dE/dt
+          dBdt = const zeroV -- dB/dt
+        }
+
+pfsUpdate ::
+  R -> -- time step
+  (ParticleFieldState -> ParticleFieldState)
+pfsUpdate dt = rungeKutta4 dt newtonSecondPFS
