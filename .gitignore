@@ -23,5 +23,6 @@ cabal.project.local~
 .ghc.environment.*
 TwoSpringsAnimation
 BilliardAnimation
+ProtonAnimation
 *.PNG
 *.png

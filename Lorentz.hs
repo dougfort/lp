@@ -114,3 +114,72 @@ pfsUpdate ::
   R -> -- time step
   (ParticleFieldState -> ParticleFieldState)
 pfsUpdate dt = rungeKutta4 dt newtonSecondPFS
+
+defaultPFS :: ParticleFieldState
+defaultPFS =
+  ParticleFieldState
+    { mass = 0,
+      charge = 0,
+      time = 0,
+      position = origin,
+      velocity = zeroV,
+      electricField = const zeroV,
+      magneticField = const zeroV
+    }
+
+pfsVisObject ::
+  R -> -- cube width
+  (ParticleFieldState -> V.VisObject R)
+pfsVisObject width st =
+  let r = position st
+      xs = [-width / 2, width / 2]
+      es :: [(Position, Vec)]
+      es =
+        [ (cart x y z, electricField st (cart z y z))
+          | x <- xs,
+            y <- xs,
+            z <- xs
+        ]
+      maxE = maximum $ map (magnitude . snd) es
+      bs :: [(Position, Vec)]
+      bs =
+        [ (cart x y z, magneticField st (cart x y z))
+          | x <- xs,
+            y <- xs,
+            z <- xs
+        ]
+      maxB = maximum $ map (magnitude . snd) bs
+      metersPerVis = width / 2
+   in V.VisObjects
+        [ vectorsVisObject metersPerVis (2 * maxE) es V.blue,
+          vectorsVisObject metersPerVis (2 * maxB) bs V.red,
+          V.Trans
+            (v3FromPos (scalePos metersPerVis r))
+            (V.Sphere 0.1 V.Solid V.green)
+        ]
+
+vectorsVisObject ::
+  R -> -- scale factor, meters per Vis unit
+  R -> -- scale factor vector field units per Vis unit
+  [(Position, Vec)] -> -- positions to show field
+  V.Color ->
+  V.VisObject R
+vectorsVisObject metersPerVis unitsPerVis pvs color =
+  V.VisObjects
+    [ V.Trans (v3FromPos (scalePos metersPerVis r)) $
+        visVec color (v ^/ unitsPerVis)
+      | (r, v) <- pvs
+    ]
+
+scalePos :: R -> Position -> Position
+scalePos metersPerVis (Cart x y z) =
+  Cart (x / metersPerVis) (y / metersPerVis) (z / metersPerVis)
+
+animatePFS ::
+  R -> -- time scale factor
+  Int -> --animation rate
+  R -> -- display width
+  ParticleFieldState -> -- initial state
+  IO ()
+animatePFS tsf ar width st =
+  simulateVis tsf ar st (pfsVisObject width) pfsUpdate
