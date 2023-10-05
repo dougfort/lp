@@ -24,5 +24,6 @@ cabal.project.local~
 TwoSpringsAnimation
 BilliardAnimation
 ProtonAnimation
+HydrogenAnimation
 *.PNG
 *.png
