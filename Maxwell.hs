@@ -1,4 +1,7 @@
 {-# OPTIONS -Wall #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Replace case with fromMaybe" #-}
 
 import CoordinateSystems
   ( ScalarField,
@@ -110,3 +113,54 @@ evens = [-hiEven, -hiEven + 2 .. hiEven]
 
 odds :: [Int]
 odds = [-hiEven + 1, -hiEven + 3 .. hiEven - 1]
+
+-- Finite Difference Time Domain
+data StateFDTD = StateFDTD
+  { timeFDTD :: R,
+    stepX :: R,
+    stepY :: R,
+    stepZ :: R,
+    eField :: M.Map (Int, Int, Int) R,
+    bField :: M.Map (Int, Int, Int) R
+  }
+  deriving (Show)
+
+initialStateFDTD :: R -> StateFDTD
+initialStateFDTD spatialStep =
+  StateFDTD
+    { timeFDTD = 0,
+      stepX = spatialStep,
+      stepY = spatialStep,
+      stepZ = spatialStep,
+      eField = M.fromList [(loc, 0) | loc <- exLocs ++ eyLocs ++ ezLocs],
+      bField = M.fromList [(loc, 0) | loc <- bxLocs ++ byLocs ++ bzLocs]
+    }
+
+lookupAZ :: Ord k => k -> M.Map k R -> R
+lookupAZ key m =
+  case M.lookup key m of
+    Just x -> x
+    Nothing -> 0
+
+partialX, partialY, partialZ :: R -> M.Map (Int, Int, Int) R -> (Int, Int, Int) -> R
+partialX dx m (i, j, k) = (lookupAZ (i + 1, j, k) m - lookupAZ (i - 1, j, k) m) / dx
+partialY dx m (i, j, k) = (lookupAZ (i, j + 1, k) m - lookupAZ (i, j - 1, k) m) / dx
+partialZ dx m (i, j, k) = (lookupAZ (i, j, k + 1) m - lookupAZ (i, j, k - 1) m) / dx
+
+curlEx, curlEy, curlEz, curlBx, curlBy, curlBz :: StateFDTD -> (Int, Int, Int) -> R
+curlEx (StateFDTD _ _ dy dz e _) loc = partialY dy e loc - partialZ dz e loc
+curlEy (StateFDTD _ dx _ dz e _) loc = partialZ dz e loc - partialX dx e loc
+curlEz (StateFDTD _ dx dy _ e _) loc = partialX dx e loc - partialY dy e loc
+curlBx (StateFDTD _ _ dy dz _ b) loc = partialY dy b loc - partialZ dz b loc
+curlBy (StateFDTD _ dx _ dz _ b) loc = partialZ dz b loc - partialX dx b loc
+curlBz (StateFDTD _ dx dy _ _ b) loc = partialX dx b loc - partialY dy b loc
+
+stateUpdate :: 
+  R -> -- dt
+  (R -> VectorField) ->  -- current density
+  (StateFDTD -> StateFDTD)
+stateUpdate dt j st0@(StateFDTD t _dx _dy _dz _e _b) =
+  let st1 = updateE dy (j t) st0 
+      st2 = updateB dt st1 
+   in st2 
+    
