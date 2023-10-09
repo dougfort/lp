@@ -155,12 +155,64 @@ curlBx (StateFDTD _ _ dy dz _ b) loc = partialY dy b loc - partialZ dz b loc
 curlBy (StateFDTD _ dx _ dz _ b) loc = partialZ dz b loc - partialX dx b loc
 curlBz (StateFDTD _ dx dy _ _ b) loc = partialX dx b loc - partialY dy b loc
 
-stateUpdate :: 
+stateUpdate ::
   R -> -- dt
-  (R -> VectorField) ->  -- current density
+  (R -> VectorField) -> -- current density
   (StateFDTD -> StateFDTD)
 stateUpdate dt j st0@(StateFDTD t _dx _dy _dz _e _b) =
-  let st1 = updateE dy (j t) st0 
-      st2 = updateB dt st1 
-   in st2 
-    
+  let st1 = updateE dt (j t) st0
+      st2 = updateB dt st1
+   in st2
+
+updateE ::
+  R -> -- time step
+  VectorField -> -- current density
+  (StateFDTD -> StateFDTD)
+updateE dt jVF st =
+  st
+    { timeFDTD = timeFDTD st + dt / 2,
+      eField = M.mapWithKey (updateEOneLoc dt jVF st) (eField st)
+    }
+
+updateB ::
+  R -> -- time step
+  (StateFDTD -> StateFDTD)
+updateB dt st =
+  st
+    { timeFDTD = timeFDTD st + dt / 2,
+      bField = M.mapWithKey (updateBOneLoc dt st) (bField st)
+    }
+
+updateEOneLoc :: R -> VectorField -> StateFDTD -> (Int, Int, Int) -> R -> R
+updateEOneLoc dt jVF st (nx, ny, nz) ec =
+  let r =
+        cart
+          (fromIntegral nx * stepX st / 2)
+          (fromIntegral ny * stepY st / 2)
+          (fromIntegral nz * stepZ st / 2)
+      Vec jx jy jz = jVF r
+   in case (odd nx, odd ny, odd nz) of
+        (True, False, False) ->
+          ec + cSI ** 2 * (curlBx st (nx, ny, nz) - mu0 * jx) * dt -- Ex
+        (False, True, False) ->
+          ec + cSI ** 2 * (curlBy st (nx, ny, nz) - mu0 * jy) * dt -- Ey
+        (False, False, True) ->
+          ec + cSI ** 2 * (curlBz st (nx, ny, nz) - mu0 * jz) * dt -- Ez
+        _ -> error "updateEOneLoc passed bad indices"
+
+updateBOneLoc :: R -> StateFDTD -> (Int, Int, Int) -> R -> R
+updateBOneLoc dt st (nx, ny, nz) bc =
+  case (odd nx, odd ny, odd nz) of
+    (False, True, True) -> bc - curlEx st (nx, ny, nz) * dt -- Bx
+    (True, False, True) -> bc - curlEy st (nx, ny, nz) * dt -- By
+    (True, True, False) -> bc - curlEz st (nx, ny, nz) * dt -- Bz
+    _ -> error "unpdateBOneLoc passed bad indices"
+
+jGaussian :: R -> VectorField
+jGaussian t r =
+  let wavelength = 1.08 -- meters
+      frequency = cSI / wavelength -- Hz
+      j0 = 77.5 -- A/m^2
+      l = 1.08 -- meters
+      rMag = magnitude (rVF r) -- meters
+   in j0 *^ exp (-rMag ** 2 / l ** 2) *^ cos (2 * pi * frequency * t) *^ kHat
