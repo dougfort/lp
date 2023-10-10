@@ -3,6 +3,8 @@
 
 {-# HLINT ignore "Replace case with fromMaybe" #-}
 
+module Maxwell where
+
 import CoordinateSystems
   ( ScalarField,
     VectorField,
@@ -216,3 +218,67 @@ jGaussian t r =
       l = 1.08 -- meters
       rMag = magnitude (rVF r) -- meters
    in j0 *^ exp (-rMag ** 2 / l ** 2) *^ cos (2 * pi * frequency * t) *^ kHat
+
+makeEpng :: (Colour R, Colour R) -> (Int, StateFDTD) -> IO ()
+makeEpng (scol, zcol) (n, StateFDTD _ _ _ _ em _) =
+  let threeDigitString = reverse $ take 3 $ reverse ("00" ++ show n)
+      pngFilePath = "MaxVF" ++ threeDigitString ++ ".png"
+      strongE = 176 -- V/m
+      vs =
+        [ ((fromIntegral nx, fromIntegral nz), (xComp ev, zComp ev))
+          | nz <- evens,
+            nx <- evens,
+            abs nx <= 50,
+            abs nz <= 50,
+            let ev = getAverage (nx, 0, nz) em ^/ strongE
+        ]
+   in gradientVectorPNG pngFilePath (scol, zcol) vs
+
+getAverage ::
+  (Int, Int, Int) -> -- (even, even, even) or (odd, odd, odd)
+  M.Map (Int, Int, Int) R ->
+  Vec
+getAverage (i, j, k) m =
+  let vXl = lookupAZ (i - 1, j, k) m
+      vYl = lookupAZ (i, j - 1, k) m
+      vZl = lookupAZ (i, j, k - 1) m
+      vXr = lookupAZ (i + 1, j, k) m
+      vYr = lookupAZ (i, j + 1, k) m
+      vZr = lookupAZ (i, j, k + 1) m
+   in vec ((vXl + vXr) / 2) ((vYl + vYr) / 2) ((vZl + vZr) / 2)
+
+gradientVectorPNG ::
+  FilePath ->
+  (Colour R, Colour R) ->
+  [((R, R), (R, R))] ->
+  IO ()
+gradientVectorPNG fileName (scol, zcol) vs =
+  let maxX = maximum $ map (fst . fst) vs
+      normalize (x, y) = (x / maxX, y / maxX)
+      array = [(normalize (x, y), magRad v) | ((x, y), v) <- vs]
+      arrowMagRadColors ::
+        R -> -- magnitude
+        R -> -- angle in radians, ccw from x axis
+        Diagram B
+      arrowMagRadColors mag th =
+        let r = sinA (15 D.@@ deg) / sinA (60 D.@@ deg)
+            myType =
+              PolyPolar
+                [ 120 D.@@ deg,
+                  0 D.@@ deg,
+                  45 D.@@ deg,
+                  30 D.@@ deg,
+                  45 D.@@ deg,
+                  0 D.@@ deg,
+                  120 D.@@ deg
+                ]
+                [1, 1, r, 1, 1, r, 1, 1]
+            myOpts = PolygonOpts myType NoOrient (p2 (0, 0))
+         in D.scale 0.5 $
+              polygon myOpts # lw none
+                # fc (blend mag scol zcol)
+                # rotate (th D.@@ rad)
+      step = 2 / sqrt (fromIntegral $ length vs)
+      scaledArrow m th = D.scale step $ arrowMagRadColors m th
+      pic = D.position [(p2 pt, scaledArrow m th) | (pt, (m, th)) <- array]
+   in renderCairo fileName (dims (V2 1024 1024)) pic

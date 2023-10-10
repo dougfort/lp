@@ -25,5 +25,7 @@ TwoSpringsAnimation
 BilliardAnimation
 ProtonAnimation
 HydrogenAnimation
+MaxVFAnimation
 *.PNG
 *.png
+*.mp4
